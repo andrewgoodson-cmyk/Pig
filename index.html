@@ -1,1 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Futuristic Coin Flip & Market</title>
+<!-- Google Fonts for a futuristic look -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
+<style>
+  body {
+    margin: 0;
+    font-family: 'Orbitron', sans-serif;
+    background-color: #0d0d0d;
+    color: #00ffff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
 
+  header {
+    background-color: #1a1a1a;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+  }
+
+  button {
+    background-color: #222;
+    color: #00ffff;
+    border: 2px solid #00ffff;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  button:hover {
+    background-color: #00ffff;
+    color: #000;
+  }
+
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  section {
+    margin-bottom: 2rem;
+  }
+
+  #coins {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+
+  .items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+  }
+
+  .item {
+    background-color: #1a1a1a;
+    padding: 1rem;
+    border: 2px solid #00ffff;
+    border-radius: 8px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+
+  .item:hover {
+    transform: scale(1.05);
+  }
+
+  #chat {
+    border: 1px solid #00ffff;
+    padding: 1rem;
+    max-height: 300px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    background-color: #111;
+    padding: 0.5rem;
+    border-radius: 4px;
+  }
+
+  #chat input {
+    padding: 0.5rem;
+    border: 1px solid #00ffff;
+    border-radius: 4px;
+    width: calc(100% - 70px);
+    margin-right: 0.5rem;
+  }
+
+  #chat button {
+    width: 60px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Futuristic Flip & Market</h1>
+  <div id="auth-section">
+    <button id="login-btn">Login</button>
+    <button id="logout-btn" style="display:none;">Logout</button>
+  </div>
+</header>
+
+<main>
+  <!-- Coin Flip Section -->
+  <section id="coin-flip">
+    <h2>Coin Flip</h2>
+    <button id="flip-btn">Flip Coin</button>
+    <div id="flip-result"></div>
+  </section>
+
+  <!-- Marketplace -->
+  <section id="marketplace">
+    <h2>Marketplace</h2>
+    <div class="items-grid" id="items-grid">
+      <!-- Placeholder items -->
+      <div class="item">
+        <img src="https://via.placeholder.com/100?text=Item+1" alt="Item 1" />
+        <p>Item 1</p>
+      </div>
+      <div class="item">
+        <img src="https://via.placeholder.com/100?text=Item+2" alt="Item 2" />
+        <p>Item 2</p>
+      </div>
+      <div class="item">
+        <img src="https://via.placeholder.com/100?text=Item+3" alt="Item 3" />
+        <p>Item 3</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat System -->
+  <section id="chat">
+    <h2>Chat</h2>
+    <div id="chat-messages"></div>
+    <div style="display:flex; align-items:center;">
+      <input type="text" id="chat-input" placeholder="Type a message..." />
+      <button id="send-btn">Send</button>
+    </div>
+  </section>
+</main>
+
+<!-- Include Supabase JS library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+  // --- Replace these with your Supabase project details ---
+  const supabaseUrl = 'https://YOUR_SUPABASE_URL.supabase.co';
+  const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  let currentUser = null;
+
+  // Elements
+  const loginBtn = document.getElementById('login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const flipBtn = document.getElementById('flip-btn');
+  const flipResultDiv = document.getElementById('flip-result');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('send-btn');
+
+  // --- Authentication ---
+  async function signIn() {
+    // You can change provider or use email login here
+    const { user, error } = await supabase.auth.signIn({ provider: 'github' });
+    if (error) {
+      alert('Error signing in: ' + error.message);
+    } else {
+      currentUser = user;
+      updateAuthUI();
+    }
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    currentUser = null;
+    updateAuthUI();
+  }
+
+  function updateAuthUI() {
+    if (currentUser) {
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'block';
+    } else {
+      loginBtn.style.display = 'block';
+      logoutBtn.style.display = 'none';
+    }
+  }
+
+  // Check auth state on load
+  supabase.auth.onAuthStateChange((event, session) => {
+    currentUser = session?.user ?? null;
+    updateAuthUI();
+    loadMessages();
+  });
+
+  // Event Listeners
+  loginBtn.onclick = signIn;
+  logoutBtn.onclick = signOut;
+
+  // --- Coin Flip ---
+  document.getElementById('flip-btn').onclick = () => {
+    const result = Math.random() < 0.5 ? 'Heads' : 'Tails';
+    flipResultDiv.innerText = `Result: ${result}`;
+  };
+
+  // --- Chat ---
+  async function loadMessages() {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) {
+      console.error(error);
+    } else {
+      chatMessages.innerHTML = '';
+      data.forEach(msg => {
+        const div = document.createElement('div');
+        div.innerText = `${msg.user}: ${msg.text}`;
+        chatMessages.appendChild(div);
+      });
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+
+  async function sendMessage() {
+    if (!currentUser) {
+      alert('Please log in to chat.');
+      return;
+    }
+    const text = chatInput.value.trim();
+    if (text === '') return;
+
+    const { error } = await supabase
+      .from('messages')
+      .insert([{ user: currentUser.email, text }]);
+    if (error) {
+      console.error(error);
+    } else {
+      chatInput.value = '';
+      loadMessages();
+    }
+  }
+
+  document.getElementById('send-btn').onclick = sendMessage;
+  chatInput.onkeydown = (e) => {
+    if (e.key === 'Enter') sendMessage();
+  };
+
+  // Load chat messages initially
+  loadMessages();
+</script>
+</body>
+</html>
